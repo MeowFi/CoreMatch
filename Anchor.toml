@@ -4,6 +4,9 @@
 resolution = true
 skip-lint = false
 
+[programs.localnet]
+core_match = "8WbYeq7UEdUoPm7RLEkuVRGvaCvaZx4tn2aaZta8QA5X"
+
 [programs.devnet]
 core_match = "8WbYeq7UEdUoPm7RLEkuVRGvaCvaZx4tn2aaZta8QA5X"
 
@@ -11,7 +14,7 @@ core_match = "8WbYeq7UEdUoPm7RLEkuVRGvaCvaZx4tn2aaZta8QA5X"
 url = "https://api.apr.dev"
 
 [provider]
-cluster = "devnet"
+cluster = "Localnet"
 wallet = "~/.config/solana/id.json"
 
 [scripts]
