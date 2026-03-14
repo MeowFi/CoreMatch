@@ -40,6 +40,8 @@ describe("core_match", () => {
 
   // Cranker (permissionless matcher)
   const cranker = Keypair.generate();
+  let crankerBaseAccount: PublicKey;
+  let crankerQuoteAccount: PublicKey;
 
   // Constants
   const PRICE = new BN(10); // 10 quote tokens per base token
@@ -98,6 +100,18 @@ describe("core_match", () => {
       admin.payer,
       quoteMint,
       userB.publicKey
+    );
+    crankerBaseAccount = await createAccount(
+      connection,
+      admin.payer,
+      baseMint,
+      cranker.publicKey
+    );
+    crankerQuoteAccount = await createAccount(
+      connection,
+      admin.payer,
+      quoteMint,
+      cranker.publicKey
     );
 
     // Mint tokens to users
@@ -671,6 +685,117 @@ describe("core_match", () => {
         systemProgram: anchor.web3.SystemProgram.programId,
       })
       .signers([userA])
+      .rpc();
+  });
+
+  // ==========================================================
+  // TEST 8: Security - Cranker Cannot Redirect Settlement
+  // ==========================================================
+  it("prevents a cranker from redirecting settlement token accounts", async () => {
+    const bidOrderId = new BN(5);
+    const askOrderId = new BN(5);
+    const amount = new BN(15);
+
+    const [bidOrderPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("order"),
+        marketPda.toBuffer(),
+        userA.publicKey.toBuffer(),
+        bidOrderId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    );
+
+    const [askOrderPda] = PublicKey.findProgramAddressSync(
+      [
+        Buffer.from("order"),
+        marketPda.toBuffer(),
+        userB.publicKey.toBuffer(),
+        askOrderId.toArrayLike(Buffer, "le", 8),
+      ],
+      program.programId
+    );
+
+    await program.methods
+      .placeOrder(bidOrderId, true, PRICE, amount)
+      .accounts({
+        maker: userA.publicKey,
+        market: marketPda,
+        order: bidOrderPda,
+        makerTokenAccount: userAQuoteAccount,
+        vault: quoteVaultKp.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([userA])
+      .rpc();
+
+    await program.methods
+      .placeOrder(askOrderId, false, PRICE, amount)
+      .accounts({
+        maker: userB.publicKey,
+        market: marketPda,
+        order: askOrderPda,
+        makerTokenAccount: userBBaseAccount,
+        vault: baseVaultKp.publicKey,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([userB])
+      .rpc();
+
+    try {
+      await program.methods
+        .matchOrders()
+        .accounts({
+          cranker: cranker.publicKey,
+          market: marketPda,
+          bidOrder: bidOrderPda,
+          askOrder: askOrderPda,
+          baseVault: baseVaultKp.publicKey,
+          quoteVault: quoteVaultKp.publicKey,
+          buyerBaseAccount: crankerBaseAccount,
+          sellerQuoteAccount: crankerQuoteAccount,
+          bidMaker: userA.publicKey,
+          askMaker: userB.publicKey,
+          tokenProgram: TOKEN_PROGRAM_ID,
+          systemProgram: anchor.web3.SystemProgram.programId,
+        })
+        .signers([cranker])
+        .rpc();
+
+      expect.fail("Should have rejected redirected settlement accounts");
+    } catch (err: any) {
+      expect(err.error.errorCode.code).to.equal("InvalidSettlementAccount");
+      console.log("  ✓ Redirected settlement accounts correctly rejected");
+    }
+
+    await program.methods
+      .cancelOrder()
+      .accounts({
+        maker: userA.publicKey,
+        market: marketPda,
+        order: bidOrderPda,
+        vault: quoteVaultKp.publicKey,
+        makerTokenAccount: userAQuoteAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([userA])
+      .rpc();
+
+    await program.methods
+      .cancelOrder()
+      .accounts({
+        maker: userB.publicKey,
+        market: marketPda,
+        order: askOrderPda,
+        vault: baseVaultKp.publicKey,
+        makerTokenAccount: userBBaseAccount,
+        tokenProgram: TOKEN_PROGRAM_ID,
+        systemProgram: anchor.web3.SystemProgram.programId,
+      })
+      .signers([userB])
       .rpc();
   });
 });

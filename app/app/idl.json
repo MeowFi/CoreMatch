@@ -1,0 +1,647 @@
+{
+  "address": "8WbYeq7UEdUoPm7RLEkuVRGvaCvaZx4tn2aaZta8QA5X",
+  "metadata": {
+    "name": "core_match",
+    "version": "0.1.0",
+    "spec": "0.1.0",
+    "description": "On-chain order matching engine"
+  },
+  "instructions": [
+    {
+      "name": "cancel_order",
+      "discriminator": [
+        95,
+        129,
+        237,
+        240,
+        8,
+        49,
+        223,
+        132
+      ],
+      "accounts": [
+        {
+          "name": "maker",
+          "writable": true,
+          "signer": true,
+          "relations": [
+            "order"
+          ]
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.admin",
+                "account": "Market"
+              }
+            ]
+          },
+          "relations": [
+            "order"
+          ]
+        },
+        {
+          "name": "order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "maker"
+              },
+              {
+                "kind": "account",
+                "path": "order.order_id",
+                "account": "Order"
+              }
+            ]
+          }
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "The vault holding the escrowed tokens"
+          ],
+          "writable": true
+        },
+        {
+          "name": "maker_token_account",
+          "docs": [
+            "The maker's token account to refund TO"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "initialize_market",
+      "discriminator": [
+        35,
+        35,
+        189,
+        193,
+        155,
+        48,
+        170,
+        203
+      ],
+      "accounts": [
+        {
+          "name": "admin",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "admin"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_mint",
+          "docs": [
+            "The base token mint (the asset being traded)"
+          ]
+        },
+        {
+          "name": "quote_mint",
+          "docs": [
+            "The quote token mint (e.g. USDC)"
+          ]
+        },
+        {
+          "name": "base_vault",
+          "docs": [
+            "Vault to hold escrowed base tokens, owned by Market PDA"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "quote_vault",
+          "docs": [
+            "Vault to hold escrowed quote tokens, owned by Market PDA"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        },
+        {
+          "name": "rent",
+          "address": "SysvarRent111111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "match_orders",
+      "discriminator": [
+        17,
+        1,
+        201,
+        93,
+        7,
+        51,
+        251,
+        134
+      ],
+      "accounts": [
+        {
+          "name": "cranker",
+          "docs": [
+            "Anyone can call this (permissionless cranker)"
+          ],
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.admin",
+                "account": "Market"
+              }
+            ]
+          },
+          "relations": [
+            "bid_order",
+            "ask_order"
+          ]
+        },
+        {
+          "name": "bid_order",
+          "docs": [
+            "The bid order (is_bid = true)"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "bid_order.maker",
+                "account": "Order"
+              },
+              {
+                "kind": "account",
+                "path": "bid_order.order_id",
+                "account": "Order"
+              }
+            ]
+          }
+        },
+        {
+          "name": "ask_order",
+          "docs": [
+            "The ask order (is_bid = false)"
+          ],
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "ask_order.maker",
+                "account": "Order"
+              },
+              {
+                "kind": "account",
+                "path": "ask_order.order_id",
+                "account": "Order"
+              }
+            ]
+          }
+        },
+        {
+          "name": "base_vault",
+          "docs": [
+            "Base vault (holds seller's escrowed base tokens)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "quote_vault",
+          "docs": [
+            "Quote vault (holds buyer's escrowed quote tokens)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "buyer_base_account",
+          "docs": [
+            "Buyer's base token account (to receive base tokens)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "seller_quote_account",
+          "docs": [
+            "Seller's quote token account (to receive quote tokens)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "bid_maker",
+          "writable": true
+        },
+        {
+          "name": "ask_maker",
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": []
+    },
+    {
+      "name": "place_order",
+      "discriminator": [
+        51,
+        194,
+        155,
+        175,
+        109,
+        130,
+        96,
+        106
+      ],
+      "accounts": [
+        {
+          "name": "maker",
+          "writable": true,
+          "signer": true
+        },
+        {
+          "name": "market",
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  109,
+                  97,
+                  114,
+                  107,
+                  101,
+                  116
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market.admin",
+                "account": "Market"
+              }
+            ]
+          }
+        },
+        {
+          "name": "order",
+          "writable": true,
+          "pda": {
+            "seeds": [
+              {
+                "kind": "const",
+                "value": [
+                  111,
+                  114,
+                  100,
+                  101,
+                  114
+                ]
+              },
+              {
+                "kind": "account",
+                "path": "market"
+              },
+              {
+                "kind": "account",
+                "path": "maker"
+              },
+              {
+                "kind": "arg",
+                "path": "order_id"
+              }
+            ]
+          }
+        },
+        {
+          "name": "maker_token_account",
+          "docs": [
+            "The maker's token account to transfer FROM"
+          ],
+          "writable": true
+        },
+        {
+          "name": "vault",
+          "docs": [
+            "The vault to transfer INTO (base_vault for asks, quote_vault for bids)"
+          ],
+          "writable": true
+        },
+        {
+          "name": "token_program",
+          "address": "TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA"
+        },
+        {
+          "name": "system_program",
+          "address": "11111111111111111111111111111111"
+        }
+      ],
+      "args": [
+        {
+          "name": "order_id",
+          "type": "u64"
+        },
+        {
+          "name": "is_bid",
+          "type": "bool"
+        },
+        {
+          "name": "price",
+          "type": "u64"
+        },
+        {
+          "name": "base_amount",
+          "type": "u64"
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "Market",
+      "discriminator": [
+        219,
+        190,
+        213,
+        55,
+        0,
+        227,
+        198,
+        154
+      ]
+    },
+    {
+      "name": "Order",
+      "discriminator": [
+        134,
+        173,
+        223,
+        185,
+        77,
+        86,
+        28,
+        51
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "PriceNotCrossed",
+      "msg": "The bid price is lower than the ask price."
+    },
+    {
+      "code": 6001,
+      "name": "OrderAlreadyFilled",
+      "msg": "This order has already been 100% filled."
+    },
+    {
+      "code": 6002,
+      "name": "MathOverflow",
+      "msg": "A mathematical overflow occurred."
+    },
+    {
+      "code": 6003,
+      "name": "InvalidOrderSide",
+      "msg": "Invalid order sides: one must be a bid and the other an ask."
+    },
+    {
+      "code": 6004,
+      "name": "MarketMismatch",
+      "msg": "Orders must belong to the same market."
+    }
+  ],
+  "types": [
+    {
+      "name": "Market",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "admin",
+            "docs": [
+              "Authority that initialized this market"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_mint",
+            "docs": [
+              "Base token mint (the asset being traded)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_mint",
+            "docs": [
+              "Quote token mint (e.g. USDC, the currency)"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "base_vault",
+            "docs": [
+              "Program-owned token account holding escrowed base tokens"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "quote_vault",
+            "docs": [
+              "Program-owned token account holding escrowed quote tokens"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    },
+    {
+      "name": "Order",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "maker",
+            "docs": [
+              "The user who placed this order"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "market",
+            "docs": [
+              "The market this order belongs to"
+            ],
+            "type": "pubkey"
+          },
+          {
+            "name": "order_id",
+            "docs": [
+              "Unique order ID per maker (allows multiple orders per user)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "is_bid",
+            "docs": [
+              "true = bid (buying base with quote), false = ask (selling base for quote)"
+            ],
+            "type": "bool"
+          },
+          {
+            "name": "price",
+            "docs": [
+              "Price in quote tokens per base token (scaled to token decimals)"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "base_amount",
+            "docs": [
+              "Total base token amount for this order"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "filled_base_amount",
+            "docs": [
+              "Amount of base tokens already filled"
+            ],
+            "type": "u64"
+          },
+          {
+            "name": "bump",
+            "docs": [
+              "PDA bump seed"
+            ],
+            "type": "u8"
+          }
+        ]
+      }
+    }
+  ]
+}

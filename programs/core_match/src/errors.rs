@@ -12,4 +12,6 @@ pub enum CoreMatchError {
     InvalidOrderSide,
     #[msg("Orders must belong to the same market.")]
     MarketMismatch,
+    #[msg("Settlement token accounts do not match the expected maker and mint.")]
+    InvalidSettlementAccount,
 }

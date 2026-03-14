@@ -1,4 +1,4 @@
-use anchor_lang::prelude::*;
+use anchor_lang::{prelude::*, AccountsClose};
 use anchor_spl::token::{self, Token, TokenAccount, Transfer};
 
 use crate::errors::CoreMatchError;
@@ -59,11 +59,23 @@ pub struct MatchOrders<'info> {
     pub quote_vault: Box<Account<'info, TokenAccount>>,
 
     /// Buyer's base token account (to receive base tokens)
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = buyer_base_account.owner == bid_order.maker
+            @ CoreMatchError::InvalidSettlementAccount,
+        constraint = buyer_base_account.mint == market.base_mint
+            @ CoreMatchError::InvalidSettlementAccount,
+    )]
     pub buyer_base_account: Box<Account<'info, TokenAccount>>,
 
     /// Seller's quote token account (to receive quote tokens)
-    #[account(mut)]
+    #[account(
+        mut,
+        constraint = seller_quote_account.owner == ask_order.maker
+            @ CoreMatchError::InvalidSettlementAccount,
+        constraint = seller_quote_account.mint == market.quote_mint
+            @ CoreMatchError::InvalidSettlementAccount,
+    )]
     pub seller_quote_account: Box<Account<'info, TokenAccount>>,
 
     /// CHECK: The bid maker's account for potential rent refund (validated in handler)
@@ -184,35 +196,15 @@ pub fn handler(ctx: Context<MatchOrders>) -> Result<()> {
     let ask_fully_filled = ask_order.base_amount == ask_order.filled_base_amount;
 
     if bid_fully_filled {
-        let bid_order_info = bid_order.to_account_info();
-        let bid_maker_info = ctx.accounts.bid_maker.to_account_info();
-        close_order_account(bid_order_info, bid_maker_info)?;
+        ctx.accounts
+            .bid_order
+            .close(ctx.accounts.bid_maker.to_account_info())?;
     }
 
     if ask_fully_filled {
-        let ask_order_info = ask_order.to_account_info();
-        let ask_maker_info = ctx.accounts.ask_maker.to_account_info();
-        close_order_account(ask_order_info, ask_maker_info)?;
-    }
-
-    Ok(())
-}
-
-/// Manually close an order account and refund rent to the maker
-fn close_order_account<'info>(
-    order_info: AccountInfo<'info>,
-    maker_info: AccountInfo<'info>,
-) -> Result<()> {
-    let dest_starting_lamports = maker_info.lamports();
-    **maker_info.lamports.borrow_mut() = dest_starting_lamports
-        .checked_add(order_info.lamports())
-        .ok_or(CoreMatchError::MathOverflow)?;
-    **order_info.lamports.borrow_mut() = 0;
-
-    // Zero out the data and assign to system program
-    let mut data = order_info.try_borrow_mut_data()?;
-    for byte in data.iter_mut() {
-        *byte = 0;
+        ctx.accounts
+            .ask_order
+            .close(ctx.accounts.ask_maker.to_account_info())?;
     }
 
     Ok(())
